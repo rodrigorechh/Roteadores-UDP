@@ -4,18 +4,19 @@
 #include <stdbool.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#include <glib.h>
-#include <conio.h>
+#include <string.h>
 
-#define SERVER "127.0.0.1"
 #define BUFLEN 512  //tamanho do buffer de leitura
 #define PORT 8888   //porta que será usada no socket
 
-void *receiver(void *void);
+void *receiver(void *data);
 void *sender(void *data);
 void *packet_handler(void *data);
 void *terminal(void *data);
 void *roteadores(void *data); 
+int cria_socket();
+void preenche_socket(int s);
+void die(char * s);
 
 pthread_t Thread1;
 pthread_t Thread2;
@@ -23,13 +24,16 @@ pthread_t Thread3;
 pthread_t Thread4;
 pthread_t Thread5;
 
+struct sockaddr_in si_me, si_other;
+int recv_len;
+
 /*
     A estrutura da mensagem a ser trocada pelos roteadores. Pode ser uma mensagem de controle ou mensagem de dado
 */
 struct mensagem {
     bool tipo_msg;//0 = controle, 1 = dado;
-    sockaddr_in end_fonte;//informações do socket fonte
-    sockaddr_in end_destino;//informações do socket destino
+    struct sockaddr_in end_fonte;//informações do socket fonte
+    struct sockaddr_in end_destino;//informações do socket destino
     char conteudo_msg[100];
 };
 
@@ -62,12 +66,12 @@ int main(void) {
     Quando recebe uma nova mensagem adiciona na fila_entrada onde ela aguardará ser processada pela
     função packet_handler.
 */
-void *receiver(void *void) {
+void *receiver(void *data) {
     int socket_int = cria_socket();
-    sockaddr_in socket_local = preenche_socket();
+    preenche_socket(socket_int);
     char buffer_local[BUFLEN];
 
-    sockaddr_in socket_externo;
+    struct sockaddr_in socket_externo;
     int socket_externo_tamanho = sizeof(si_other);
 
     while(1)
@@ -133,20 +137,25 @@ void configInicial() {
 */
 int cria_socket() {
     int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);//cria socket
-    (s == -1) ? die("socket") : return s;
+    if(s==-1) {
+    	die("socket");
+    } else {
+    	return s;
+    }
 }
 
-sockaddr_in preenche_socket() {
-    sockaddr_in si_me;
-
+void preenche_socket(int s) {
     memset((char *) &si_me, 0, sizeof(si_me));//zera campos pra limpar lixo da memória
     si_other.sin_family = AF_INET;//valora como AF_INET, significa que é ipv4
     si_me.sin_port = htons(PORT);//define porta, htons transforma long em big endian caso seja little
-    si_me.sin_addr.s_addr = htonl(SERVER);//define ip, htonl transforma long em big endian caso seja little
+    si_me.sin_addr.s_addr = htonl(INADDR_ANY);//define ip, htonl transforma long em big endian caso seja little
 
     if( bind(s , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1) {//conecta socket com a porta
         die("bind");
     }
+}
 
-    return si_me;
+void die(char * s) {
+	perror(s);
+	exit(1);
 }
