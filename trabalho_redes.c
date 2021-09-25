@@ -5,6 +5,8 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string.h>
+//#include <glib.h>
+//#include <conio.h>
 
 #define BUFLEN 512  //tamanho do buffer de leitura
 #define PORT 8888   //porta que será usada no socket
@@ -14,8 +16,7 @@ void *sender(void *data);
 void *packet_handler(void *data);
 void *terminal(void *data);
 void *roteadores(void *data); 
-int cria_socket();
-void preenche_socket(int s);
+int cria_socket(int porta);
 void die(char * s);
 
 pthread_t Thread1;
@@ -37,7 +38,7 @@ struct mensagem {
     char conteudo_msg[100];
 };
 
-/*a fazer: encontrar biblioteca que implementa fila para as 2 variáveis abaixo*/
+/*TODO: encontrar biblioteca que implementa fila para as 2 variáveis abaixo*/
 //Queue fila_entrada;//A fila dos pacotes que chegaram de outro roteador e ainda não foram processados
 //Queue fila_saida;//A fila dos pacotes que estão aguardando para serem enviados pra outro roteador
 
@@ -67,8 +68,7 @@ int main(void) {
     função packet_handler.
 */
 void *receiver(void *data) {
-    int socket_int = cria_socket();
-    preenche_socket(socket_int);
+    int socket_int = cria_socket(PORT);
     char buffer_local[BUFLEN];
 
     struct sockaddr_in socket_externo;
@@ -132,27 +132,24 @@ void configInicial() {
     //ler arquivo enlaces.config
 }
 
-/*
-    Cria socket UDP com ip versão 4
-*/
-int cria_socket() {
-    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);//cria socket
-    if(s==-1) {
-    	die("socket");
-    } else {
-    	return s;
+int cria_socket(int porta) {
+    /*Cria socket vazio*/
+    int socket_int = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);//cria socket
+    if(socket_int==-1) {
+    	die("Erro ao criar socket");
     }
-}
 
-void preenche_socket(int s) {
+    /*da valores como endereço e porta ao socket*/
     memset((char *) &si_me, 0, sizeof(si_me));//zera campos pra limpar lixo da memória
     si_other.sin_family = AF_INET;//valora como AF_INET, significa que é ipv4
-    si_me.sin_port = htons(PORT);//define porta, htons transforma long em big endian caso seja little
+    si_me.sin_port = htons(porta);//define porta, htons transforma long em big endian caso seja little
     si_me.sin_addr.s_addr = htonl(INADDR_ANY);//define ip, htonl transforma long em big endian caso seja little
 
-    if( bind(s , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1) {//conecta socket com a porta
-        die("bind");
+    if(bind(socket_int , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1) {//conecta socket com endereço e porta
+        die("Erro ao conectar socket com os endereços");
     }
+
+    return socket_int;
 }
 
 void die(char * s) {
