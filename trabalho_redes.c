@@ -5,8 +5,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string.h>
-//#include <glib.h>
-//#include <conio.h>
+#include "fila.c"
 
 #define BUFLEN 512  //tamanho do buffer de leitura
 #define PORT 8888   //porta que será usada no socket
@@ -15,7 +14,7 @@ void *receiver(void *data);
 void *sender(void *data);
 void *packet_handler(void *data);
 void *terminal(void *data);
-void *roteadores(void *data); 
+void *roteadores(void *data);
 int cria_socket(int porta);
 void die(char * s);
 
@@ -27,20 +26,7 @@ pthread_t Thread5;
 
 struct sockaddr_in si_me, si_other;
 int recv_len;
-
-/*
-    A estrutura da mensagem a ser trocada pelos roteadores. Pode ser uma mensagem de controle ou mensagem de dado
-*/
-struct mensagem {
-    bool tipo_msg;//0 = controle, 1 = dado;
-    struct sockaddr_in end_fonte;//informações do socket fonte
-    struct sockaddr_in end_destino;//informações do socket destino
-    char conteudo_msg[100];
-};
-
-/*TODO: encontrar biblioteca que implementa fila para as 2 variáveis abaixo*/
-//Queue fila_entrada;//A fila dos pacotes que chegaram de outro roteador e ainda não foram processados
-//Queue fila_saida;//A fila dos pacotes que estão aguardando para serem enviados pra outro roteador
+fila_de_saida fila_saida = {.mutex = PTHREAD_MUTEX_INITIALIZER};
 
 int main(void) {
     //-- Cria as Threads --
