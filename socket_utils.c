@@ -8,7 +8,7 @@
 
 void die(char * s); 
 int cria_socket();
-struct sockaddr_in cria_socket_receiver(int socket_int, uint16_t porta);
+struct sockaddr_in cria_socket_receiver(int socket_int, char* ip, uint16_t porta);
 struct sockaddr_in cria_socket_sender(int socket_int, char* ip, uint16_t porta);
 
 int cria_socket() {
@@ -20,7 +20,7 @@ int cria_socket() {
     }
 }
 
-struct sockaddr_in cria_socket_receiver(int socket_int, uint16_t porta) {
+struct sockaddr_in cria_socket_receiver(int socket_int, char* ip, uint16_t porta) {
     struct sockaddr_in socketaddr;
 
     /*da valores como endereço e porta ao socket*/
@@ -28,13 +28,17 @@ struct sockaddr_in cria_socket_receiver(int socket_int, uint16_t porta) {
     socketaddr.sin_family = AF_INET;//valora como AF_INET, significa que é ipv4
     socketaddr.sin_port = htons(porta);//define porta, htons transforma long em big endian caso seja little
     socketaddr.sin_addr.s_addr = htonl(INADDR_ANY);//define ip, htonl transforma long em big endian caso seja little. INADDR_ANY significa todos os ips
+    if(inet_aton(ip, &socketaddr.sin_addr) == 0) {//converte ip para o sin_addr da struct. Caso retorne 0 é pq deu erro
+        fprintf(stderr, "inet_aton() failed\n");
+        exit(1);
+    }
 
     if(bind(socket_int , (struct sockaddr*)&socketaddr, sizeof(socketaddr) ) == -1) {//configura socket com endereço e porta pra que consiga escutar na porta
         die("Erro ao conectar socket com os endereços");
     }
 
     if(DEBUG)
-        printf("\nSocket criado na porta %d\n", porta);
+        printf("\nSocket criado no endereço %s:%d\n", ip, porta);
 
     return socketaddr;
 }

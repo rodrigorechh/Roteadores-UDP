@@ -147,7 +147,7 @@ void *receiver(void *data) {
     struct thread_arg_struct *args = (struct thread_arg_struct *)data;
 
     int socket_int = cria_socket();
-    struct sockaddr_in socket_receiver = cria_socket_receiver(socket_int, args->roteador_config->porta);
+    struct sockaddr_in socket_receiver = cria_socket_receiver(socket_int, args->roteador_config->ip, args->roteador_config->porta);
     char buffer_local[BUFFER_LENGTH];
 
     struct sockaddr_in socket_externo;
