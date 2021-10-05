@@ -5,7 +5,11 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string.h>
+
 void die(char * s); 
+int cria_socket();
+struct sockaddr_in cria_socket_receiver(int socket_int, uint16_t porta);
+struct sockaddr_in cria_socket_sender(int socket_int, char* ip, uint16_t porta);
 
 int cria_socket() {
     int socket_int = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);//cria socket
@@ -16,7 +20,7 @@ int cria_socket() {
     }
 }
 
-struct sockaddr_in cria_socket_receiver(int socket_int, int porta) {
+struct sockaddr_in cria_socket_receiver(int socket_int, uint16_t porta) {
     struct sockaddr_in socketaddr;
 
     /*da valores como endereço e porta ao socket*/
@@ -29,10 +33,13 @@ struct sockaddr_in cria_socket_receiver(int socket_int, int porta) {
         die("Erro ao conectar socket com os endereços");
     }
 
+    if(DEBUG)
+        printf("\nSocket criado na porta %d\n", porta);
+
     return socketaddr;
 }
 
-struct sockaddr_in cria_socket_sender(int socket_int, char* ip, int porta) {
+struct sockaddr_in cria_socket_sender(int socket_int, char* ip, uint16_t porta) {
     struct sockaddr_in socketaddr;
     /*da valores como endereço e porta ao socket*/
     memset((char *) &socketaddr, 0, sizeof(socketaddr));//zera campos pra limpar lixo da memória
