@@ -2,12 +2,13 @@
 #include <stdbool.h>
 #include <arpa/inet.h>
 #define QTD_MENSAGENS 3
+#define BUFFER_LENGTH 512
 /*
     A estrutura da mensagem a ser trocada pelos roteadores. Pode ser uma mensagem de controle ou mensagem de dado
 */
 typedef struct {
     bool tipo;//0 = controle, 1 = dado;
-    char conteudo[100];
+    char* conteudo;
 
     //struct sockaddr_in socket_receiver;//informações do socket fonte
     int socket_fonte_int;

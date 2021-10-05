@@ -5,10 +5,10 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <unistd.h>
 #include "fila.c"
 #include "socket_utils.c"
 
-#define BUFFER_SIZE 512  //tamanho do buffer de leitura
 #define PORT 8888   //porta que será usada no socket
 #define QTD_MAXIMA_ROTEADOR 20   //define quantidade máxima de roteadores que a rede suporta
 #define DEBUG 1   //define debug ativo ou inativo
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 void carregarConfiguracaoRoteadores(){
     FILE * configuracaoRoteadores;
     
-    char buffer[BUFFER_SIZE];
+    char buffer[BUFFER_LENGTH];
     int totalLido = 0;
     int quantidadeRoteadores = 0;
 
@@ -81,7 +81,7 @@ void carregarConfiguracaoRoteadores(){
         exit(EXIT_FAILURE);
     }
 
-    while(fgets(buffer, BUFFER_SIZE, configuracaoRoteadores) != NULL) 
+    while(fgets(buffer, BUFFER_LENGTH, configuracaoRoteadores) != NULL) 
     {
         if(quantidadeRoteadores == QTD_MAXIMA_ROTEADOR){
             printf("A rede suporta no máximo %d roteadores", QTD_MAXIMA_ROTEADOR);
@@ -134,7 +134,7 @@ RoteadorConfig obterConfiguracaoRoteadorPorId(char * id){
 void *receiver(void *data) {
     int socket_int = cria_socket();
     struct sockaddr_in socket_receiver = cria_socket_receiver(socket_int, PORT);
-    char buffer_local[BUFFER_SIZE];
+    char buffer_local[BUFFER_LENGTH];
 
     struct sockaddr_in socket_externo;
     int socket_externo_tamanho = sizeof(socket_receiver);
@@ -143,12 +143,12 @@ void *receiver(void *data) {
     {
         printf("Esperando dados...");
         //fflush(stdout);
-        memset(buffer_local,'\0', BUFFER_SIZE);
+        memset(buffer_local,'\0', BUFFER_LENGTH);
 
         int receiver_length;
         /*fica aguardando mensagem chegar no socket s, qnd chegar a mensagem armazena no buffer,
          e a informação do socket de quem enviou a req armazena em si_externo.*/
-        if ((receiver_length = recvfrom(socket_int, buffer_local, BUFFER_SIZE, 0, (struct sockaddr *) &socket_externo, &socket_externo_tamanho)) == -1) {
+        if ((receiver_length = recvfrom(socket_int, buffer_local, BUFFER_LENGTH, 0, (struct sockaddr *) &socket_externo, &socket_externo_tamanho)) == -1) {
             die("recvfrom()");
         }
 
