@@ -5,10 +5,10 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <unistd.h>
 #include "fila.c"
 #include "socket_utils.c"
 
-#define BUFLEN 512  //tamanho do buffer de leitura
 #define PORT 8888   //porta que será usada no socket
 
 void *receiver(void *data);
@@ -57,7 +57,7 @@ int main(void) {
 void *receiver(void *data) {
     int socket_int = cria_socket();
     struct sockaddr_in socket_receiver = cria_socket_receiver(socket_int, PORT);
-    char buffer_local[BUFLEN];
+    char buffer_local[BUFFER_LENGTH];
 
     struct sockaddr_in socket_externo;
     int socket_externo_tamanho = sizeof(socket_receiver);
@@ -66,12 +66,12 @@ void *receiver(void *data) {
     {
         printf("Esperando dados...");
         //fflush(stdout);
-        memset(buffer_local,'\0', BUFLEN);
+        memset(buffer_local,'\0', BUFFER_LENGTH);
 
         int receiver_length;
         /*fica aguardando mensagem chegar no socket s, qnd chegar a mensagem armazena no buffer,
          e a informação do socket de quem enviou a req armazena em si_externo.*/
-        if ((receiver_length = recvfrom(socket_int, buffer_local, BUFLEN, 0, (struct sockaddr *) &socket_externo, &socket_externo_tamanho)) == -1) {
+        if ((receiver_length = recvfrom(socket_int, buffer_local, BUFFER_LENGTH, 0, (struct sockaddr *) &socket_externo, &socket_externo_tamanho)) == -1) {
             die("recvfrom()");
         }
 
