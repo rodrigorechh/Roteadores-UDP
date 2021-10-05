@@ -8,8 +8,11 @@
 #include "fila.c"
 #include "socket_utils.c"
 
-#define BUFLEN 512  //tamanho do buffer de leitura
+#define BUFFER_SIZE 512  //tamanho do buffer de leitura
 #define PORT 8888   //porta que será usada no socket
+#define QTD_MAXIMA_ROTEADOR 20   //define quantidade máxima de roteadores que a rede suporta
+#define DEBUG 1   //define debug ativo ou inativo
+
 
 void *receiver(void *data);
 void *sender(void *data);
@@ -20,6 +23,8 @@ struct sockaddr_in cria_socket_receiver(int socket_int, int porta);
 struct sockaddr_in cria_socket_sender(int socket_int, char* ip, int porta);
 int cria_socket();
 void die(char * s);
+void carregarConfiguracaoRoteadores();
+RoteadorConfig obterConfiguracaoRoteadorPorId(char * id);
 
 pthread_t Thread1;
 pthread_t Thread2;
@@ -29,7 +34,20 @@ pthread_t Thread5;
 
 pthread_mutex_t mutex_sender = PTHREAD_MUTEX_INITIALIZER;
 
-int main(void) {
+RoteadorConfig arrayConfiguracaoRoteadores[QTD_MAXIMA_ROTEADOR];
+
+int main(int argc, char *argv[]) {
+    carregarConfiguracaoRoteadores();
+
+    char idRoteador[15];
+	strncpy(idRoteador, argv[1], 15);
+
+    if(DEBUG)
+        printf("\n\nId do roteador é %s\n", idRoteador);
+
+    obterConfiguracaoRoteadorPorId(idRoteador);
+    return 1;
+
     //-- Cria as Threads --
     pthread_create(&Thread1, NULL, receiver, NULL); //prioridade NULL - padrão
     pthread_create(&Thread2, NULL, sender, NULL);
@@ -49,6 +67,65 @@ int main(void) {
     return 1;
 }
 
+void carregarConfiguracaoRoteadores(){
+    FILE * configuracaoRoteadores;
+    
+    char buffer[BUFFER_SIZE];
+    int totalLido = 0;
+    int quantidadeRoteadores = 0;
+
+    configuracaoRoteadores = fopen("roteador.config", "r");
+
+    if (configuracaoRoteadores == NULL) {
+        printf("Erro ao abrir o arquivo de configuração de roteador 'roteador.config'");
+        exit(EXIT_FAILURE);
+    }
+
+    while(fgets(buffer, BUFFER_SIZE, configuracaoRoteadores) != NULL) 
+    {
+        if(quantidadeRoteadores == QTD_MAXIMA_ROTEADOR){
+            printf("A rede suporta no máximo %d roteadores", QTD_MAXIMA_ROTEADOR);
+            exit(EXIT_FAILURE);
+        }
+        totalLido = strlen(buffer);
+
+        buffer[totalLido - 1] = buffer[totalLido - 1] == '\n' ? '\0' : buffer[totalLido - 1];
+
+        char * roteadorId;
+        char * roteadorPorta;
+        char * roteadorIP;
+        
+        roteadorId = strtok(buffer, "   ");
+        roteadorPorta = strtok(NULL, "   ");
+        roteadorIP = strtok(NULL, "   ");
+
+        if(DEBUG)
+            printf("Roteador %s: %s:%s\n", roteadorId, roteadorIP, roteadorPorta);
+
+        arrayConfiguracaoRoteadores[quantidadeRoteadores].id = roteadorId;
+        arrayConfiguracaoRoteadores[quantidadeRoteadores].porta = atoi(roteadorPorta);
+        arrayConfiguracaoRoteadores[quantidadeRoteadores].ip = roteadorIP;
+
+        quantidadeRoteadores++;
+    } 
+    
+    if(DEBUG)
+        printf("\n\n%d roteadores configurados\n", quantidadeRoteadores);
+
+    fclose(configuracaoRoteadores);
+}
+
+RoteadorConfig obterConfiguracaoRoteadorPorId(char * id){
+    for (int i = 0; i < QTD_MAXIMA_ROTEADOR; i++) {
+        printf("\narrayConfiguracaoRoteadores[%d].id = %s", i, arrayConfiguracaoRoteadores[i].id);
+		if (strcmp(id, arrayConfiguracaoRoteadores[i].id) == 0){
+            return arrayConfiguracaoRoteadores[i];
+        }
+    }
+
+    die(sprintf("A função 'obterConfiguracaoRoteadorPorId' não encontrou roteador com o id %s", id));
+}
+
 /*
     Thread que fica na escuta por novas mensagens em um socket que ele mesmo cria. 
     Quando recebe uma nova mensagem adiciona na fila_entrada onde ela aguardará ser processada pela
@@ -57,7 +134,7 @@ int main(void) {
 void *receiver(void *data) {
     int socket_int = cria_socket();
     struct sockaddr_in socket_receiver = cria_socket_receiver(socket_int, PORT);
-    char buffer_local[BUFLEN];
+    char buffer_local[BUFFER_SIZE];
 
     struct sockaddr_in socket_externo;
     int socket_externo_tamanho = sizeof(socket_receiver);
@@ -66,12 +143,12 @@ void *receiver(void *data) {
     {
         printf("Esperando dados...");
         //fflush(stdout);
-        memset(buffer_local,'\0', BUFLEN);
+        memset(buffer_local,'\0', BUFFER_SIZE);
 
         int receiver_length;
         /*fica aguardando mensagem chegar no socket s, qnd chegar a mensagem armazena no buffer,
          e a informação do socket de quem enviou a req armazena em si_externo.*/
-        if ((receiver_length = recvfrom(socket_int, buffer_local, BUFLEN, 0, (struct sockaddr *) &socket_externo, &socket_externo_tamanho)) == -1) {
+        if ((receiver_length = recvfrom(socket_int, buffer_local, BUFFER_SIZE, 0, (struct sockaddr *) &socket_externo, &socket_externo_tamanho)) == -1) {
             die("recvfrom()");
         }
 

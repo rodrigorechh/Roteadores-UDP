@@ -17,6 +17,12 @@ typedef struct {
 } mensagem;
 
 typedef struct {
+	char *id;
+	uint16_t porta;
+	char *ip;
+} RoteadorConfig;
+
+typedef struct {
     mensagem mensagens[QTD_MENSAGENS];
 } fila_mensagens;
 
