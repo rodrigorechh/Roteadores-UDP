@@ -19,6 +19,7 @@ void *terminal(void *data);
 void *roteadores(void *data); 
 void die(char * s);
 void carregar_config_roteadores();
+void carregar_enlaces_roteadores();
 roteador_config obter_config_roteador_por_id(int id);
 
 pthread_t Thread1;
