@@ -25,6 +25,12 @@ typedef struct {
 } roteador_config;
 
 typedef struct {
+	int origem;
+	int destino;
+	int custo;
+} enlace_config;
+
+typedef struct {
     mensagem mensagens[QTD_MENSAGENS];
 } fila_mensagens;
 
