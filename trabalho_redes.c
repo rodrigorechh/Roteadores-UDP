@@ -78,7 +78,7 @@ void carregar_enlaces_roteadores(){
     char buffer[BUFFER_LENGTH];
     int total_lido = 0;
     int quantidade_enlaces = 0;
-    char separador[] = "      ";
+    char separador[] = " ";
 
     configuracao_enlaces = fopen("enlaces.config", "r");
 
@@ -131,7 +131,7 @@ void carregar_config_roteadores(){
     char buffer[BUFFER_LENGTH];
     int total_lido = 0;
     int quantidade_roteadores = 0;
-    char separador[] = "   ";
+    char separador[] = " ";
 
     configuracao_roteadores = fopen("roteador.config", "r");
 
@@ -185,6 +185,7 @@ void carregar_config_roteadores(){
 
 roteador_config obter_config_roteador_por_id(int id){
     for (int i = 0; i < QTD_MAXIMA_ROTEADOR; i++) {
+        printf("\nip: %s", array_config_roteadores[i].ip);
 		if (id == array_config_roteadores[i].id){
             return array_config_roteadores[i];
         }
@@ -279,6 +280,12 @@ void *packet_handler(void *data){
 */
 void *terminal(void *data){
     printf("\nThread responsavel pelo terminal");
+    int id_roteador = 0;
+    printf("id alvo:");
+    scanf("%i", &id_roteador);
+
+    roteador_config config_roteador_atual = obter_config_roteador_por_id(id_roteador);
+
     pthread_exit(NULL);
 }
 
