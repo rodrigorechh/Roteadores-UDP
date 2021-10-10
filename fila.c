@@ -2,6 +2,8 @@
 #include <stdbool.h>
 #include <arpa/inet.h>
 #define QTD_MENSAGENS 3
+#define BUFFER_LENGTH 512
+#define DEBUG 1   //define debug ativo ou inativo
 /*
     A estrutura da mensagem a ser trocada pelos roteadores. Pode ser uma mensagem de controle ou mensagem de dado
 */
@@ -12,8 +14,24 @@ typedef struct {
 } mensagem;
 
 typedef struct {
+	int id;
+	uint16_t porta;
+	char *ip;
+} roteador_config;
+
+typedef struct {
+	int origem;
+	int destino;
+	int custo;
+} enlace_config;
+
+typedef struct {
     mensagem mensagens[QTD_MENSAGENS];
 } fila_mensagens;
+
+struct thread_arg_struct {
+    roteador_config *roteador_config;
+};
 
 fila_mensagens fila_entrada;
 pthread_mutex_t mutex_fila_entrada = PTHREAD_MUTEX_INITIALIZER;

@@ -12,6 +12,8 @@
 #define BUFFER_LENGTH 512  //tamanho do buffer de leitura
 #define PORT 8888   //porta que será usada no socket
 #define IP "127.0.0.1"
+#define QTD_MAXIMA_ROTEADOR 20   //define quantidade máxima de roteadores que a rede suporta
+#define QTD_MAXIMA_ENLACES 100   //define quantidade máxima de enlaces que a rede suporta
 
 void *receiver(void *data);
 void *sender(void *data);
@@ -22,6 +24,9 @@ struct sockaddr_in cria_socket_receiver(int socket_int, char* ip, int porta);
 int cria_socket();
 void die(char * s);
 void add_socket_destino_fila_saida(char* conteudo, char* ip, int porta);
+void carregar_config_roteadores();
+void carregar_enlaces_roteadores();
+roteador_config obter_config_roteador_por_id(int id);
 
 pthread_t Thread1;
 pthread_t Thread2;
@@ -29,19 +34,42 @@ pthread_t Thread3;
 pthread_t Thread4;
 pthread_t Thread5;
 
-int socket_int;
+int socket_int = cria_socket();
 struct sockaddr_in sockaddr;
 
-int main(void) {
+roteador_config array_config_roteadores[QTD_MAXIMA_ROTEADOR];
+enlace_config array_config_enlaces[QTD_MAXIMA_ENLACES];
 
-    socket_int = cria_socket();
-    sockaddr = cria_socket_receiver(socket_int, IP , PORT);
+int main(int argc, char *argv[]) {
+    carregar_config_roteadores();
+    carregar_enlaces_roteadores();
 
+    char tmpIdRoteador[15];
+	strncpy(tmpIdRoteador, argv[1], 15);
+    int idRoteador = atoi(tmpIdRoteador);
+
+    if(DEBUG)
+        printf("\n\nId do roteador do processo atual é %d\n", idRoteador);
+
+    roteador_config config_roteador_atual = obter_config_roteador_por_id(idRoteador);
+
+    if(DEBUG)
+        printf("\nConfiguração do roteador do processo atual é %s:%d\n", config_roteador_atual.ip, config_roteador_atual.porta);
+
+    //-- Define os argumentos das threads
+    struct thread_arg_struct *args = (struct thread_arg_struct *)malloc(sizeof(struct thread_arg_struct));
+    args->roteador_config = &config_roteador_atual;
+
+
+    //-- Inicia socket que será usado para receber(thread receiver) e enviar(thread sender) requisições
+    struct thread_arg_struct *args = (struct thread_arg_struct *)data;
+	struct sockaddr_in socket_receiver = cria_socket_receiver(socket_int, args->roteador_config->ip, args->roteador_config->porta);
+    
     //-- Cria as Threads --
-    pthread_create(&Thread1, NULL, receiver, NULL); //prioridade NULL - padrão
-    pthread_create(&Thread2, NULL, sender, NULL);
-    pthread_create(&Thread3, NULL, packet_handler, NULL);
-    pthread_create(&Thread4, NULL, terminal, NULL);
+    pthread_create(&Thread1, NULL, receiver, (void *)args); //prioridade NULL - padrão
+    pthread_create(&Thread2, NULL, sender, (void *)args);
+    pthread_create(&Thread3, NULL, packet_handler, (void *)args);
+    pthread_create(&Thread4, NULL, terminal, (void *)args);
 
     //Faz um Join - Retorno das Threads
     pthread_join(Thread1, NULL);
@@ -56,6 +84,129 @@ int main(void) {
     return 1;
 }
 
+void carregar_enlaces_roteadores(){
+    FILE * configuracao_enlaces;
+    
+    char buffer[BUFFER_LENGTH];
+    int total_lido = 0;
+    int quantidade_enlaces = 0;
+    char separador[] = "      ";
+
+    configuracao_enlaces = fopen("enlaces.config", "r");
+
+    if (configuracao_enlaces == NULL) {
+        printf("\nErro ao abrir o arquivo de configuração de enlaces 'enlaces.config'");
+        exit(EXIT_FAILURE);
+    }
+
+    if(DEBUG)
+        printf("\nIniciando carregamento da configuração de enlaces");
+
+    while(fgets(buffer, BUFFER_LENGTH, configuracao_enlaces) != NULL) 
+    {
+        total_lido = strlen(buffer);
+
+        buffer[total_lido - 1] = buffer[total_lido - 1] == '\n' ? '\0' : buffer[total_lido - 1];
+       
+        char roteador_origem[10];
+        char roteador_destino[10];
+        char roteador_custo[20];
+
+        char * ptr = strtok(buffer, separador);
+        strcpy(roteador_origem, ptr);
+
+        ptr = strtok(NULL, separador);
+        strcpy(roteador_destino, ptr);
+
+        ptr = strtok(NULL, separador);
+        strcpy(roteador_custo, ptr);
+
+        if(DEBUG)
+            printf("\nEnlace de %s até %s -> %s", roteador_origem, roteador_destino, roteador_custo);
+        
+        array_config_enlaces[quantidade_enlaces].origem = atoi(roteador_origem);
+        array_config_enlaces[quantidade_enlaces].destino = atoi(roteador_destino);
+        array_config_enlaces[quantidade_enlaces].custo = atoi(roteador_custo);
+
+        quantidade_enlaces++;
+    } 
+    
+    fclose(configuracao_enlaces);
+
+    if(DEBUG)
+        printf("\nCarregamento da configuração de %d enlaces finalizada!!", quantidade_enlaces);
+}
+
+void carregar_config_roteadores(){
+    FILE * configuracao_roteadores;
+    
+    char buffer[BUFFER_LENGTH];
+    int total_lido = 0;
+    int quantidade_roteadores = 0;
+    char separador[] = "   ";
+
+    configuracao_roteadores = fopen("roteador.config", "r");
+
+    if (configuracao_roteadores == NULL) {
+        printf("\nErro ao abrir o arquivo de configuração de roteador 'roteador.config'");
+        exit(EXIT_FAILURE);
+    }
+
+    if(DEBUG)
+        printf("\nIniciando carregamento da configuração de roteadores");
+
+    while(fgets(buffer, BUFFER_LENGTH, configuracao_roteadores) != NULL) 
+    {
+        if(quantidade_roteadores == QTD_MAXIMA_ROTEADOR){
+            printf("\nA rede suporta no máximo %d roteadores", QTD_MAXIMA_ROTEADOR);
+            exit(EXIT_FAILURE);
+        }
+
+        total_lido = strlen(buffer);
+
+        buffer[total_lido - 1] = buffer[total_lido - 1] == '\n' ? '\0' : buffer[total_lido - 1];
+       
+        char roteador_id[4];
+        char roteador_porta[10];
+        char roteador_IP[16];
+
+        char * ptr = strtok(buffer, separador);
+        strcpy(roteador_id, ptr);
+
+        ptr = strtok(NULL, separador);
+        strcpy(roteador_porta, ptr);
+
+        ptr = strtok(NULL, separador);
+        strcpy(roteador_IP, ptr);
+
+        if(DEBUG)
+            printf("\nRoteador %s: %s:%s", roteador_id, roteador_IP, roteador_porta);
+        
+        array_config_roteadores[quantidade_roteadores].id = atoi(roteador_id);
+        array_config_roteadores[quantidade_roteadores].porta = atoi(roteador_porta);
+        array_config_roteadores[quantidade_roteadores].ip = roteador_IP;
+
+        quantidade_roteadores++;
+    } 
+    
+    fclose(configuracao_roteadores);
+
+    if(DEBUG)
+        printf("\nCarregamento da configuração de %d roteadores finalizada!!", quantidade_roteadores);
+}
+
+roteador_config obter_config_roteador_por_id(int id){
+    for (int i = 0; i < QTD_MAXIMA_ROTEADOR; i++) {
+		if (id == array_config_roteadores[i].id){
+            return array_config_roteadores[i];
+        }
+    }
+
+    char msg_erro[100];
+    sprintf(msg_erro, "A função 'obter_config_roteador_por_id' não encontrou roteador com o id %d", id);
+    die(msg_erro);
+}
+
 /*
     Thread que fica na escuta por novas mensagens em um socket que ele mesmo cria. 
     Quando recebe uma nova mensagem adiciona na fila_entrada onde ela aguardará ser processada pela
@@ -66,8 +217,11 @@ void *receiver(void *data) {
     int socket_externo_tamanho = sizeof(socket_externo);
     char buffer_local[BUFFER_LENGTH];
 
-    while(1) {
-        printf("Esperando dados...");
+    while(1)
+    {
+        if(DEBUG)
+            printf("\nThread receiver está esperando dados...");
+
         //fflush(stdout);
         memset(buffer_local,'\0', BUFFER_LENGTH);
 

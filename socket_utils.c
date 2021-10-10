@@ -5,7 +5,11 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string.h>
+
 void die(char * s); 
+int cria_socket();
+struct sockaddr_in cria_socket_receiver(int socket_int, char* ip, int porta);
+struct sockaddr_in cria_socket_sender(int socket_int, char* ip, int porta);
 
 int cria_socket() {
     int socket_int = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);//cria socket
@@ -28,6 +32,9 @@ struct sockaddr_in cria_socket_receiver(int socket_int, char* ip, int porta) {
     if(bind(socket_int , (struct sockaddr*)&socketaddr, sizeof(socketaddr) ) < 0) {//configura socket com endereço e porta pra que consiga escutar na porta
         die("Erro ao conectar socket com os endereços");
     }
+
+    if(DEBUG)
+        printf("\nSocket criado no endereço %s:%d\n", ip, porta);
 
     return socketaddr;
 }
