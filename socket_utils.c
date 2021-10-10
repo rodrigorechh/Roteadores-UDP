@@ -16,16 +16,16 @@ int cria_socket() {
     }
 }
 
-struct sockaddr_in cria_socket_receiver(int socket_int, int porta) {
+struct sockaddr_in cria_socket_receiver(int socket_int, char* ip, int porta) {
     struct sockaddr_in socketaddr;
 
     /*da valores como endereço e porta ao socket*/
     memset((char *) &socketaddr, 0, sizeof(socketaddr));//zera campos pra limpar lixo da memória
     socketaddr.sin_family = AF_INET;//valora como AF_INET, significa que é ipv4
     socketaddr.sin_port = htons(porta);//define porta, htons transforma long em big endian caso seja little
-    socketaddr.sin_addr.s_addr = htonl(INADDR_ANY);//define ip, htonl transforma long em big endian caso seja little. INADDR_ANY significa todos os ips
+    socketaddr.sin_addr.s_addr = inet_addr(ip);
 
-    if(bind(socket_int , (struct sockaddr*)&socketaddr, sizeof(socketaddr) ) == -1) {//configura socket com endereço e porta pra que consiga escutar na porta
+    if(bind(socket_int , (struct sockaddr*)&socketaddr, sizeof(socketaddr) ) < 0) {//configura socket com endereço e porta pra que consiga escutar na porta
         die("Erro ao conectar socket com os endereços");
     }
 

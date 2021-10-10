@@ -7,12 +7,7 @@
 */
 typedef struct {
     bool tipo;//0 = controle, 1 = dado;
-    char conteudo[100];
-
-    //struct sockaddr_in socket_receiver;//informações do socket fonte
-    int socket_fonte_int;
-    int receiver_length;
-
+    char* conteudo;
     struct sockaddr_in socket_externo;//informações do socket destino
 } mensagem;
 
@@ -32,8 +27,8 @@ int tamanho_atual_fila_saida = 0;
 void fila_entrada_add(mensagem mensagem_nova) {
     //TODO, tratar se a fila tiver cheia ficar esperando.
     pthread_mutex_lock(&mutex_fila_entrada);
-    tamanho_atual_fila_entrada++;
     fila_entrada.mensagens[tamanho_atual_fila_entrada] = mensagem_nova;
+    tamanho_atual_fila_entrada++;
     pthread_mutex_unlock(&mutex_fila_entrada);
 }
 
@@ -49,20 +44,24 @@ void fila_entrada_remove() {
 
 mensagem fila_entrada_get() {
     pthread_mutex_lock(&mutex_fila_entrada);
-    return fila_entrada.mensagens[0];
+    mensagem mensagem = fila_entrada.mensagens[0];
     pthread_mutex_unlock(&mutex_fila_entrada);
+    return mensagem;
 }
 
 bool fila_entrada_tem_elementos() {
-    return (tamanho_atual_fila_entrada == 0) ? true : false;
+    pthread_mutex_lock(&mutex_fila_entrada);
+    bool temElementos = (tamanho_atual_fila_entrada > 0) ? true : false;
+    pthread_mutex_unlock(&mutex_fila_entrada);
+    return temElementos;
 }
 
 /*Add elemento no final da fila*/
 void fila_saida_add(mensagem mensagem_nova) {
     //TODO, tratar se a fila tiver cheia ficar esperando.
     pthread_mutex_lock(&mutex_fila_saida);
-    tamanho_atual_fila_saida++;
     fila_saida.mensagens[tamanho_atual_fila_saida] = mensagem_nova;
+    tamanho_atual_fila_saida++;
     pthread_mutex_unlock(&mutex_fila_saida);
 }
 
@@ -78,10 +77,14 @@ void fila_saida_remove() {
 
 mensagem fila_saida_get() {
     pthread_mutex_lock(&mutex_fila_saida);
-    return fila_saida.mensagens[0];
+    mensagem mensagem = fila_saida.mensagens[0];
     pthread_mutex_unlock(&mutex_fila_saida);
+    return mensagem;
 }
 
 bool fila_saida_tem_elementos() {
-    return (tamanho_atual_fila_saida == 0) ? true : false;
+    pthread_mutex_lock(&mutex_fila_saida);
+    bool temElementos = (tamanho_atual_fila_saida > 0) ? true : false;
+    pthread_mutex_unlock(&mutex_fila_saida);
+    return temElementos;
 }
