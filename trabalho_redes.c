@@ -34,13 +34,15 @@ pthread_t Thread3;
 pthread_t Thread4;
 pthread_t Thread5;
 
-int socket_int = cria_socket();
+int socket_int;
 struct sockaddr_in sockaddr;
 
 roteador_config array_config_roteadores[QTD_MAXIMA_ROTEADOR];
 enlace_config array_config_enlaces[QTD_MAXIMA_ENLACES];
 
 int main(int argc, char *argv[]) {
+    socket_int = cria_socket();
+
     carregar_config_roteadores();
     carregar_enlaces_roteadores();
 
@@ -56,14 +58,12 @@ int main(int argc, char *argv[]) {
     if(DEBUG)
         printf("\nConfiguração do roteador do processo atual é %s:%d\n", config_roteador_atual.ip, config_roteador_atual.porta);
 
+    //-- Inicia socket que será usado para receber(thread receiver) e enviar(thread sender) requisições
+    sockaddr = cria_socket_receiver(socket_int, config_roteador_atual.ip, config_roteador_atual.porta);
+
     //-- Define os argumentos das threads
     struct thread_arg_struct *args = (struct thread_arg_struct *)malloc(sizeof(struct thread_arg_struct));
-    args->roteador_config = &config_roteador_atual;
-
-
-    //-- Inicia socket que será usado para receber(thread receiver) e enviar(thread sender) requisições
-    struct thread_arg_struct *args = (struct thread_arg_struct *)data;
-	struct sockaddr_in socket_receiver = cria_socket_receiver(socket_int, args->roteador_config->ip, args->roteador_config->porta);
+    // args->roteador_config = &config_roteador_atual;
     
     //-- Cria as Threads --
     pthread_create(&Thread1, NULL, receiver, (void *)args); //prioridade NULL - padrão
@@ -197,7 +197,7 @@ void carregar_config_roteadores(){
 
 roteador_config obter_config_roteador_por_id(int id){
     for (int i = 0; i < QTD_MAXIMA_ROTEADOR; i++) {
-		if (id == array_config_roteadores[i].id){
+        if (id == array_config_roteadores[i].id){
             return array_config_roteadores[i];
         }
     }
@@ -213,6 +213,8 @@ roteador_config obter_config_roteador_por_id(int id){
     função packet_handler.
 */
 void *receiver(void *data) {
+    struct thread_arg_struct *args = (struct thread_arg_struct *)data;
+
     struct sockaddr_in socket_externo;
     int socket_externo_tamanho = sizeof(socket_externo);
     char buffer_local[BUFFER_LENGTH];
@@ -291,18 +293,21 @@ void *packet_handler(void *data){
     Thread dedicada ao terminal para permitir interações do usuário
 */
 void *terminal(void *data){
-    char ip[9], conteudo[BUFFER_LENGTH];
-    int porta;
-    printf("Escreva o ip do roteador: \n");
-    scanf("%s", ip);
+    char conteudo[BUFFER_LENGTH];
+    int idRoteador;
 
-    printf("Escreva a porta do roteador: \n");
-    scanf("%i", &porta);
+    printf("Escreva o id do roteador: \n");
+    scanf("%i", &idRoteador);
 
+    roteador_config config_roteador = obter_config_roteador_por_id(idRoteador);
+    
     printf("Escreva o conteúdo da mensagem: \n");
     scanf("%s", conteudo);
 
-    add_socket_destino_fila_saida("msg", IP, PORT);
+    printf("ip roteador: %s\n", config_roteador.ip);
+    printf("porta roteador: %i\n", config_roteador.porta);
+
+    add_socket_destino_fila_saida(conteudo, config_roteador.ip, config_roteador.porta);
 
     pthread_exit(NULL);
 }
@@ -314,7 +319,7 @@ void configInicial() {
 }
 
 void add_socket_destino_fila_saida(char* conteudo, char* ip, int porta) {
-    struct sockaddr_in sockaddr_other = cria_socket_sender(cria_socket(), ip, 8889);
+    struct sockaddr_in sockaddr_other = cria_socket_sender(cria_socket(), ip, porta);
     mensagem msg = {.conteudo = conteudo, .socket_externo = sockaddr_other};
     fila_saida_add(msg);
 }
